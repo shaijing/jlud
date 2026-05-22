@@ -1,0 +1,22 @@
+[package]
+name = "jlud"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+iced = "0.14"
+iced_widget = "0.14"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["time"] }
+thiserror = "2"
+directories = "6"
+# cygnus dependencies
+aes-gcm = { version = "0.10", features = ["std"] }
+clap = { version = "4", features = ["derive"] }
+hostname = "0.4"
+md5 = "0.7"
+rand = "0.8"
+time = { version = "0.3", features = ["formatting", "local-offset", "macros"] }
