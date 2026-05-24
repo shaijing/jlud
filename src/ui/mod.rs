@@ -316,11 +316,19 @@ impl UIApp {
                     let _ = tx.send(BackgroundEvent::Status(ConnectionState::Connected));
 
                     tracing::dispatcher::with_default(&dispatch, || {
-                        match auth_command_resolver(args, Some(cancel)) {
+                        match auth_command_resolver(args, Some(cancel.clone())) {
                             Ok(()) => {} // unreachable: keep_alive loops forever
                             Err(e) => {
-                                let _ = tx.send(BackgroundEvent::Error(e.to_string()));
-                                let _ = tx.send(BackgroundEvent::Status(ConnectionState::Error));
+                                // If cancelled by user (disconnect), don't report as error
+                                if cancel.load(std::sync::atomic::Ordering::Relaxed) {
+                                    let _ = tx.send(BackgroundEvent::Log {
+                                        level: "info".into(),
+                                        message: "Authentication cancelled by user".into(),
+                                    });
+                                } else {
+                                    let _ = tx.send(BackgroundEvent::Error(e.to_string()));
+                                    let _ = tx.send(BackgroundEvent::Status(ConnectionState::Error));
+                                }
                             }
                         }
                     });
@@ -601,8 +609,8 @@ impl UIApp {
         container(
             container(
                 column![
-                    text("Close Cygnus Drcom?").size(18),
-                    text("Do you want to quit or minimize to the system tray?").size(13),
+                    text("Close Cygnus Drcom?").size(18).color(theme::TEXT_PRIMARY),
+                    text("Do you want to quit or minimize to the system tray?").size(13).color(theme::TEXT_PRIMARY),
                     row![
                         button(text("Minimize to Tray").size(13))
                             .on_press(Message::ConfirmMinimizeToTray)

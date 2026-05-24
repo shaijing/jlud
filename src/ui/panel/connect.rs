@@ -119,10 +119,16 @@ pub fn view(state: &AppState) -> iced::Element<'_, crate::ui::Message> {
 
     // === Layout ===
 
+    let action_row = row![
+        Space::new().width(Length::Fill),
+        action_btn,
+    ];
+
     container(
         column![
             status_card,
-            action_btn,
+            Space::new().height(Length::Fixed(16.0)),
+            action_row,
             Space::new().height(Length::Fixed(12.0)),
             logs_panel,
         ]

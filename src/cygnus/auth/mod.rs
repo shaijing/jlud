@@ -27,7 +27,8 @@ pub fn auth_command_resolver(args: AuthArgs, cancel: Option<Arc<AtomicBool>>) ->
         let mut ctx = create_context(&args.file, args.timeout)?;
         info!("Starting authentication process");
 
-        match resolver_impl(&mut ctx) {
+        let cancel_ref = cancel.as_ref().map(Arc::as_ref);
+        match resolver_impl(&mut ctx, cancel_ref) {
             Ok(_) => {
                 error!("Unknown error, the program should not reach here");
             }
@@ -50,7 +51,6 @@ pub fn auth_command_resolver(args: AuthArgs, cancel: Option<Arc<AtomicBool>>) ->
 #[tracing::instrument(skip_all, name = "context")]
 fn create_context(file: &str, timeout: u64) -> AuthResult<DrContext> {
     let fd = OpenOptions::new().read(true).open(file)?;
-    info!("Reading user data from file: {}", file);
 
     let user = UserCipher::decrypt(fd)?;
     info!("Target user: {}", user.username);
@@ -59,10 +59,10 @@ fn create_context(file: &str, timeout: u64) -> AuthResult<DrContext> {
 }
 
 #[tracing::instrument(skip_all, name = "run")]
-fn resolver_impl(ctx: &mut DrContext) -> AuthResult<()> {
+fn resolver_impl(ctx: &mut DrContext, cancel: Option<&AtomicBool>) -> AuthResult<()> {
     challenge(ctx)?;
     login(ctx)?;
-    keep_alive(ctx)
+    keep_alive(ctx, cancel)
 }
 
 #[tracing::instrument(skip_all)]
@@ -136,7 +136,7 @@ fn login(ctx: &mut DrContext) -> AuthResult<()> {
 }
 
 #[tracing::instrument(skip_all)]
-fn keep_alive(ctx: &mut DrContext) -> AuthResult<()> {
+fn keep_alive(ctx: &mut DrContext, cancel: Option<&AtomicBool>) -> AuthResult<()> {
     info!("Starting keep alive");
 
     // let mut send_buf_38 = [0; 38];
@@ -146,6 +146,11 @@ fn keep_alive(ctx: &mut DrContext) -> AuthResult<()> {
     let mut keep_40_count = 0u8;
 
     loop {
+        if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+            info!("Keep alive cancelled by user");
+            return Err(AuthError::AppMaxTriesExceeded);
+        }
+
         info!("Sending keep alive data");
 
         let mut send_buf_38 = [0; 38];
@@ -191,7 +196,13 @@ fn keep_alive(ctx: &mut DrContext) -> AuthResult<()> {
         ctx.client.recv(&mut recv_buf)?;
         keep_40_count = keep_40_count.wrapping_add(1);
         info!("Keep alive second accepted");
-        // sleep for 20 seconds
-        std::thread::sleep(std::time::Duration::from_secs(20));
+        // sleep for 20 seconds, check cancel every second
+        for _ in 0..20 {
+            if cancel.is_some_and(|c| c.load(Ordering::Relaxed)) {
+                info!("Keep alive cancelled by user");
+                return Err(AuthError::AppMaxTriesExceeded);
+            }
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
     }
 }
