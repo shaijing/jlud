@@ -26,7 +26,7 @@ impl Default for AppSettings {
 
 impl AppSettings {
     pub fn cache_dir() -> Option<PathBuf> {
-        ProjectDirs::from("rs", "cygnus", "cygnus-gui")
+        ProjectDirs::from("", "", "cygnus")
             .map(|dirs| dirs.cache_dir().to_path_buf())
     }
 

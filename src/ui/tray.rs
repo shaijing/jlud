@@ -60,12 +60,30 @@ impl TrayHandle {
 }
 
 fn create_tray_icon() -> Icon {
+    // Try to load the PNG icon from assets, fall back to solid blue
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("assets")
+        .join("icon")
+        .join("jlud.png");
+
+    if let Ok(img) = image::open(&path) {
+        let img = img.into_rgba8();
+        let (width, height) = img.dimensions();
+        let rgba = img.into_raw();
+        match Icon::from_rgba(rgba, width, height) {
+            Ok(icon) => return icon,
+            Err(e) => {
+                eprintln!("Failed to create tray icon from PNG: {}", e);
+            }
+        }
+    }
+
+    // Fallback: solid blue square
     let width: u32 = 32;
     let height: u32 = 32;
     let pixel_count = (width * height) as usize;
     let mut rgba = Vec::with_capacity(pixel_count * 4);
     for _ in 0..pixel_count {
-        // Blue: R=37, G=99, B=235 (matching sidebar #2563eb)
         rgba.extend_from_slice(&[37, 99, 235, 255]);
     }
     Icon::from_rgba(rgba, width, height).expect("Failed to create tray icon from RGBA data")

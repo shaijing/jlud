@@ -10,7 +10,7 @@ fn card_section<'a>(
 
     container(
         column![
-            text(title).size(14),
+            text(title).size(14).color(theme::TEXT_PRIMARY),
             Space::new().height(10.0),
             body,
         ]
@@ -93,7 +93,7 @@ pub fn view(settings: &AppSettings) -> iced::Element<'_, crate::ui::Message> {
 
     container(
         column![
-            text("Settings").size(20),
+            text("Settings").size(20).color(theme::TEXT_PRIMARY),
             Space::new().height(20.0),
             card_section("Connection", column![log_body, Space::new().height(12.0), timeout_body].into()),
             Space::new().height(10.0),

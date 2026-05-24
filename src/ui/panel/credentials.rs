@@ -85,7 +85,7 @@ fn new_tab(state: &AppState) -> iced::Element<'_, Message> {
     }
 
     column![
-        text("Create User File").size(16),
+        text("Create User File").size(16).color(theme::TEXT_PRIMARY),
         Space::new().height(16.0),
         field("Username",    "username",           &state.form_username, Message::UpdateUsername),
         Space::new().height(12.0),
@@ -146,7 +146,7 @@ fn inspect_tab(state: &AppState) -> iced::Element<'_, Message> {
     let has_file = state.usr_file.is_some();
 
     column![
-        text("Inspect User File").size(16),
+        text("Inspect User File").size(16).color(theme::TEXT_PRIMARY),
         Space::new().height(16.0),
         row![
             button(text("Load & Decrypt").size(14))
