@@ -1,6 +1,6 @@
 use std::net::UdpSocket;
 
-use crate::user::User;
+use crate::cygnus::user::User;
 
 use super::{
     data::{self, AliveType, DrContextData},

@@ -1,7 +1,7 @@
 pub use clap::{Parser, Subcommand};
 
-use crate::auth::args::AuthArgs;
-use crate::user::args::UserArgs;
+use crate::cygnus::auth::args::AuthArgs;
+use crate::cygnus::user::args::UserArgs;
 
 #[derive(Parser)]
 pub struct Args {

@@ -1,6 +1,11 @@
+#![cfg_attr(windows, windows_subsystem = "windows")]
 // jlud - Drcom UI
-// Main entry point - UI will be wired in Task 12
+// Main entry point
 
-fn main() {
-    println!("jlud - Drcom UI (placeholder - UI wiring in Task 12)");
+mod config;
+mod cygnus;
+mod ui;
+
+fn main() -> iced::Result {
+    crate::ui::run()
 }

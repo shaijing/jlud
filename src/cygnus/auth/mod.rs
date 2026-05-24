@@ -11,7 +11,7 @@ use data::AliveType;
 use error::{AuthError, AuthResult};
 use tracing::{error, info, warn};
 
-use crate::user::cipher::UserCipher;
+use crate::cygnus::user::cipher::UserCipher;
 
 #[tracing::instrument(skip_all, name = "auth")]
 pub fn auth_command_resolver(args: AuthArgs) -> AuthResult<()> {

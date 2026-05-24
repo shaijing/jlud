@@ -1,4 +1,4 @@
-use crate::user::error::UserError;
+use crate::cygnus::user::error::UserError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuthError {
