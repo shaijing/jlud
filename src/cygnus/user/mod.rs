@@ -15,7 +15,8 @@ pub fn user_command_resolver(args: UserArgs) -> UserResult<()> {
         UserCommand::Create(create_args) => {
             let fd = OpenOptions::new()
                 .write(true)
-                .create_new(true)
+                .create(true)
+                .truncate(true)
                 .open(&create_args.file)?;
             let mac = User::transform_mac(&create_args.mac)?;
             let user =

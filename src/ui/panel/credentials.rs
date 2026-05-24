@@ -41,8 +41,6 @@ pub fn view(state: &AppState) -> iced::Element<'_, Message> {
     let tab_bar = row![
         tab_button("Create", CredentialsTab::New),
         Space::new().width(Length::Fixed(4.0)),
-        tab_button("Load",   CredentialsTab::Load),
-        Space::new().width(Length::Fixed(4.0)),
         tab_button("Inspect", CredentialsTab::Inspect),
     ]
     .spacing(0);
@@ -51,7 +49,6 @@ pub fn view(state: &AppState) -> iced::Element<'_, Message> {
 
     let content = match state.active_credentials_tab {
         CredentialsTab::New     => new_tab(state),
-        CredentialsTab::Load    => load_tab(state),
         CredentialsTab::Inspect => inspect_tab(state),
     };
 
@@ -105,8 +102,6 @@ fn new_tab(state: &AppState) -> iced::Element<'_, Message> {
         .spacing(0),
         Space::new().height(12.0),
         field("MAC Address", "00:11:22:33:44:55",  &state.form_mac,      Message::UpdateMac),
-        Space::new().height(12.0),
-        field("Output File", "/path/to/output.usr", &state.form_usr_path, Message::UpdateUsrPath),
         Space::new().height(20.0),
         button(text("Create .usr File").size(14))
             .style(theme::primary_button_style)
@@ -114,7 +109,6 @@ fn new_tab(state: &AppState) -> iced::Element<'_, Message> {
                 username: state.form_username.clone(),
                 password: state.form_password.clone(),
                 mac:      state.form_mac.clone(),
-                path:     state.form_usr_path.clone(),
             })
             .width(iced::Length::Fixed(180.0))
             .height(iced::Length::Fixed(38.0)),
@@ -123,55 +117,10 @@ fn new_tab(state: &AppState) -> iced::Element<'_, Message> {
     .into()
 }
 
-// === Load Tab ===
-
-fn load_tab(state: &AppState) -> iced::Element<'_, Message> {
-    use iced_widget::{button, column, row, text, text_input, Space};
-
-    let feedback: iced::Element<_> = if let Some(ref f) = state.usr_file {
-        if std::path::Path::new(f).exists() {
-            row![
-                text("✓").size(14).color(theme::CONNECTED_GREEN),
-                text(format!("Loaded: {}", f)).size(13).color(theme::TEXT_PRIMARY),
-            ]
-            .spacing(8)
-            .into()
-        } else {
-            text(format!("File not found: {}", f)).size(13).color(theme::ERROR_RED).into()
-        }
-    } else {
-        text("No file loaded yet").size(13).color(theme::TEXT_SECONDARY).into()
-    };
-
-    column![
-        text("Load Authentication File").size(16),
-        Space::new().height(16.0),
-        text("File Path").size(12).color(theme::TEXT_SECONDARY),
-        Space::new().height(4.0),
-        text_input("path/to/file.usr", &state.form_usr_path)
-            .on_input(Message::UpdateUsrPath)
-            .size(14)
-            .width(iced::Length::Fill),
-        Space::new().height(12.0),
-        row![
-            button(text("Load File").size(14))
-                .style(theme::primary_button_style)
-                .on_press(Message::LoadUsrFile(state.form_usr_path.clone()))
-                .width(iced::Length::Fixed(140.0))
-                .height(iced::Length::Fixed(38.0)),
-            Space::new().width(12.0),
-            feedback,
-        ]
-        .align_y(iced::Alignment::Center),
-    ]
-    .spacing(0)
-    .into()
-}
-
 // === Inspect Tab ===
 
 fn inspect_tab(state: &AppState) -> iced::Element<'_, Message> {
-    use iced_widget::{button, column, row, text, text_input, Space};
+    use iced_widget::{button, column, row, text, Space};
 
     let user_section: iced::Element<_> = if let Some(ref user) = state.decrypted_user {
         column![
@@ -194,28 +143,17 @@ fn inspect_tab(state: &AppState) -> iced::Element<'_, Message> {
         text("No user data loaded").size(13).color(theme::TEXT_SECONDARY).into()
     };
 
+    let has_file = state.usr_file.is_some();
+
     column![
         text("Inspect User File").size(16),
         Space::new().height(16.0),
-        text("File Path").size(12).color(theme::TEXT_SECONDARY),
-        Space::new().height(4.0),
-        text_input("path/to/file.usr", &state.form_usr_path)
-            .on_input(Message::UpdateUsrPath)
-            .size(14)
-            .width(iced::Length::Fill),
-        Space::new().height(12.0),
         row![
             button(text("Load & Decrypt").size(14))
                 .style(theme::primary_button_style)
-                .on_press(Message::InspectUsrFile(state.form_usr_path.clone()))
+                .on_press_maybe(has_file.then(|| Message::InspectUsrFile))
                 .width(iced::Length::Fixed(180.0))
                 .height(iced::Length::Fixed(38.0)),
-            Space::new().width(16.0),
-            if let Some(ref path) = state.usr_file {
-                text(format!("File: {}", path)).size(13).color(theme::TEXT_PRIMARY)
-            } else {
-                text("").size(13)
-            },
         ]
         .align_y(iced::Alignment::Center),
         Space::new().height(20.0),

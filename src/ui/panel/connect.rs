@@ -76,43 +76,6 @@ pub fn view(state: &AppState) -> iced::Element<'_, crate::ui::Message> {
         .width(Length::Fixed(200.0))
         .height(Length::Fixed(38.0));
 
-    // === File Card ===
-
-    let file_info: iced::Element<'_, crate::ui::Message> = if let Some(ref path) = state.usr_file {
-        let exists = std::path::Path::new(path).exists();
-        let icon = if exists { "✓" } else { "✗" };
-        let color = if exists { theme::CONNECTED_GREEN } else { theme::ERROR_RED };
-        row![
-            text(icon).size(16).color(color),
-            text(path.as_str()).size(13)
-                .color(if exists { theme::TEXT_PRIMARY } else { theme::ERROR_RED }),
-        ]
-        .spacing(8)
-        .align_y(Alignment::Center)
-        .into()
-    } else {
-        row![
-            text("⚠").size(16).color(theme::WARN_YELLOW),
-            text("No file loaded").size(13).color(theme::WARN_YELLOW),
-            text("—").size(13).color(theme::TEXT_SECONDARY),
-            text("Go to Credentials → Load").size(13).color(theme::TEXT_SECONDARY),
-        ]
-        .spacing(8)
-        .align_y(Alignment::Center)
-        .into()
-    };
-
-    let file_card = container(
-        column![
-            text("Authentication File").size(11).color(theme::TEXT_SECONDARY),
-            Space::new().height(Length::Fixed(6.0)),
-            file_info,
-        ]
-    )
-    .style(theme::card_style())
-    .padding(14)
-    .width(Length::Fill);
-
     // === Live Logs ===
 
     let log_items: Vec<iced::Element<_>> = state.logs.iter().rev().take(100).map(|entry| {
@@ -160,8 +123,6 @@ pub fn view(state: &AppState) -> iced::Element<'_, crate::ui::Message> {
         column![
             status_card,
             action_btn,
-            Space::new().height(Length::Fixed(10.0)),
-            file_card,
             Space::new().height(Length::Fixed(12.0)),
             logs_panel,
         ]

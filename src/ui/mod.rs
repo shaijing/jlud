@@ -23,9 +23,9 @@ pub enum Message {
     ConfirmQuit,
     ConfirmMinimizeToTray,
     // Credentials
-    CreateUsr { username: String, password: String, mac: String, path: String },
-    LoadUsrFile(String),
-    InspectUsrFile(String),
+    CreateUsr { username: String, password: String, mac: String },
+    DismissResultDialog,
+    InspectUsrFile,
     // Settings
     UpdateLogLevel(String),
     UpdateTimeout(u64),
@@ -38,7 +38,6 @@ pub enum Message {
     UpdateUsername(String),
     UpdatePassword(String),
     UpdateMac(String),
-    UpdateUsrPath(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,7 +50,6 @@ pub enum NavItem {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CredentialsTab {
     New,
-    Load,
     Inspect,
 }
 
@@ -73,6 +71,8 @@ pub enum BackgroundEvent {
     Log { level: String, message: String },
     Error(String),
     UserDecrypted(crate::cygnus::user::data::User),
+    UsrFileCreated(String),
+    CreateFailed(String),
 }
 
 // === AppState ===
@@ -88,7 +88,6 @@ pub struct AppState {
     pub form_username: String,
     pub form_password: String,
     pub form_mac: String,
-    pub form_usr_path: String,
     // Decrypted user for Inspect tab
     pub decrypted_user: Option<crate::cygnus::user::data::User>,
     // Channel receiver for background auth events
@@ -99,6 +98,10 @@ pub struct AppState {
     // Tray
     pub visible: bool,
     pub show_close_dialog: bool,
+    pub show_result_dialog: bool,
+    pub result_dialog_title: String,
+    pub result_dialog_message: String,
+    pub result_dialog_is_error: bool,
     tray_rx: mpsc::Receiver<tray::TrayMessage>,
     #[allow(dead_code)]
     _tray_icon: Option<tray_icon::TrayIcon>,
@@ -168,7 +171,6 @@ impl UIApp {
         let (tx, rx) = mpsc::channel();
         let settings = AppSettings::load();
         let usr_file = settings.last_usr_file.clone();
-        let form_usr_path = usr_file.clone().unwrap_or_default();
 
         // Create system tray
         let tray_handle = tray::TrayHandle::new();
@@ -186,12 +188,15 @@ impl UIApp {
                 form_username: String::new(),
                 form_password: String::new(),
                 form_mac: String::new(),
-                form_usr_path,
                 decrypted_user: None,
                 event_rx: Some(rx),
                 event_tx: tx,
                 visible: true,
                 show_close_dialog: false,
+                show_result_dialog: false,
+                result_dialog_title: String::new(),
+                result_dialog_message: String::new(),
+                result_dialog_is_error: false,
                 tray_rx,
                 _tray_icon,
             },
@@ -218,6 +223,19 @@ impl UIApp {
             }
             BackgroundEvent::UserDecrypted(user) => {
                 self.state.decrypted_user = Some(user);
+            }
+            BackgroundEvent::UsrFileCreated(path) => {
+                self.state.usr_file = Some(path);
+                self.state.show_result_dialog = true;
+                self.state.result_dialog_title = "Success".into();
+                self.state.result_dialog_message = "User file created and loaded.".into();
+                self.state.result_dialog_is_error = false;
+            }
+            BackgroundEvent::CreateFailed(msg) => {
+                self.state.show_result_dialog = true;
+                self.state.result_dialog_title = "Error".into();
+                self.state.result_dialog_message = msg;
+                self.state.result_dialog_is_error = true;
             }
         }
     }
@@ -397,18 +415,33 @@ impl UIApp {
                 let _ = self.state.settings.save();
                 iced::Task::none()
             }
-            Message::CreateUsr { username, password, mac, path } => {
+            Message::CreateUsr { username, password, mac } => {
                 let tx = self.state.event_tx.clone();
                 std::thread::spawn(move || {
                     use crate::cygnus::user::user_command_resolver;
                     use crate::cygnus::user::args::{UserArgs, UserCommand, UserCreateArgs};
+
+                    // Generate a deterministic cache path based on username hash
+                    let cache_path = match crate::config::AppSettings::cache_dir() {
+                        Some(dir) => {
+                            let hash = format!("{:x}", md5::compute(username.as_bytes()));
+                            std::fs::create_dir_all(&dir).ok();
+                            dir.join(format!("usr_{}.usr", hash)).to_string_lossy().to_string()
+                        }
+                        None => {
+                            let _ = tx.send(BackgroundEvent::Error(
+                                "Failed to resolve cache directory".into(),
+                            ));
+                            return;
+                        }
+                    };
 
                     let args = UserArgs {
                         command: UserCommand::Create(UserCreateArgs {
                             username,
                             password,
                             mac,
-                            file: path,
+                            file: cache_path.clone(),
                         }),
                     };
 
@@ -418,22 +451,26 @@ impl UIApp {
                                 level: "info".into(),
                                 message: "User file created successfully".into(),
                             });
+                            let _ = tx.send(BackgroundEvent::UsrFileCreated(cache_path));
                         }
                         Err(e) => {
-                            let _ = tx.send(BackgroundEvent::Error(format!("Failed to create user file: {}", e)));
+                            let _ = tx.send(BackgroundEvent::CreateFailed(
+                                format!("Failed to create user file: {}", e),
+                            ));
                         }
                     }
                 });
                 iced::Task::none()
             }
-            Message::LoadUsrFile(path) => {
-                self.state.usr_file = Some(path.clone());
-                self.state.settings.last_usr_file = Some(path);
-                let _ = self.state.settings.save();
+            Message::DismissResultDialog => {
+                self.state.show_result_dialog = false;
                 iced::Task::none()
             }
-            Message::InspectUsrFile(path) => {
-                self.state.usr_file = Some(path.clone());
+            Message::InspectUsrFile => {
+                let path = match self.state.usr_file.clone() {
+                    Some(p) => p,
+                    None => return iced::Task::none(),
+                };
                 self.state.settings.last_usr_file = Some(path.clone());
                 let _ = self.state.settings.save();
                 if path.is_empty() {
@@ -483,16 +520,15 @@ impl UIApp {
                 self.state.form_mac = s;
                 iced::Task::none()
             }
-            Message::UpdateUsrPath(s) => {
-                self.state.form_usr_path = s;
-                iced::Task::none()
-            }
         }
     }
 
     pub fn view(&self) -> Element<'_, Message> {
         if self.state.show_close_dialog {
             return self.close_dialog_view();
+        }
+        if self.state.show_result_dialog {
+            return self.result_dialog_view();
         }
 
         use crate::ui::panel::{connect, credentials, settings};
@@ -581,6 +617,51 @@ impl UIApp {
                 .align_x(iced::Alignment::Center),
             )
             .padding(24)
+            .style(card_style()),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x(Length::Fill)
+        .center_y(Length::Fill)
+        .padding(20)
+        .into()
+    }
+
+    fn result_dialog_view(&self) -> Element<'_, Message> {
+        use iced_widget::{button, column, container, text};
+        use crate::ui::theme::card_style;
+
+        let icon = if self.state.result_dialog_is_error { "✗" } else { "✓" };
+        let icon_color = if self.state.result_dialog_is_error {
+            theme::ERROR_RED
+        } else {
+            theme::CONNECTED_GREEN
+        };
+
+        let btn_style: fn(&iced::Theme, iced_widget::button::Status) -> iced_widget::button::Style =
+            if self.state.result_dialog_is_error {
+                theme::danger_button_style
+            } else {
+                theme::primary_button_style
+            };
+
+        container(
+            container(
+                column![
+                    text(icon).size(32).color(icon_color),
+                    text(self.state.result_dialog_title.as_str()).size(18),
+                    text(self.state.result_dialog_message.as_str()).size(13)
+                        .color(theme::TEXT_SECONDARY),
+                    button(text("OK").size(14))
+                        .style(btn_style)
+                        .on_press(Message::DismissResultDialog)
+                        .width(iced::Length::Fixed(100.0))
+                        .height(iced::Length::Fixed(36.0)),
+                ]
+                .spacing(14)
+                .align_x(iced::Alignment::Center),
+            )
+            .padding(28)
             .style(card_style()),
         )
         .width(Length::Fill)
