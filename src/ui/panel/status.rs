@@ -11,7 +11,7 @@ pub fn view(state: &AppState) -> iced::Element<'_, crate::ui::Message> {
         ConnectionState::Connected    => (theme::CONNECTED_GREEN,    "Connected"),
         ConnectionState::Connecting   => (theme::WARN_YELLOW,       "Connecting"),
         ConnectionState::Error        => (theme::ERROR_RED,         "Error"),
-        ConnectionState::Disconnected => (theme::DISCONNECTED_GRAY, "Disconnected"),
+        ConnectionState::Disconnected => (theme::TEXT_SECONDARY, "Disconnected"),
     };
 
     let badge = container(
@@ -82,15 +82,15 @@ pub fn view(state: &AppState) -> iced::Element<'_, crate::ui::Message> {
                 Space::new().width(Length::Fill),
                 badge,
             ]
-            .padding(iced::Padding { top: 0.0, right: 0.0, bottom: 16.0, left: 0.0 })
             .align_y(Alignment::Center),
+            Space::new().height(Length::Fixed(12.0)),
             text("Live Logs").size(14).color(theme::TEXT_SECONDARY),
             Space::new().height(Length::Fixed(8.0)),
             logs,
         ]
         .spacing(0)
     )
-    .padding(32)
+    .padding(20)
     .width(Length::Fill)
     .height(Length::Fill)
     .into()

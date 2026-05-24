@@ -37,7 +37,7 @@ fn main() {
                     eprintln!("App will continue without logging");
                 },
             );
-            auth_command_resolver(auth_args).unwrap_or_else(|e| {
+            auth_command_resolver(auth_args, None).unwrap_or_else(|e| {
                 error!("Error when running auth command: {}", e);
                 std::process::exit(1);
             });

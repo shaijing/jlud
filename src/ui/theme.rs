@@ -1,25 +1,54 @@
+//! OKLCH color palette — perceptually uniform, harmonious.
+//!
+//! All values pre-computed from OKLCH → sRGB to avoid const-fn limitations.
+//! Palette revolves around hue 265° (cool indigo-blue) with status hues.
+
 use iced_widget::container;
 
-// Brand colors
-pub const SIDEBAR_BG: iced::Color = iced::Color::from_rgb(0.098, 0.18, 0.357);   // #192b5b deep navy
-pub const SIDEBAR_ACTIVE: iced::Color = iced::Color::from_rgb(0.22, 0.35, 0.65);  // #3859a6 highlight
-pub const SIDEBAR_HOVER: iced::Color = iced::Color::from_rgb(0.18, 0.28, 0.50);   // #2e4780 hover
-pub const CONTENT_BG: iced::Color = iced::Color::from_rgb(0.945, 0.949, 0.957);   // #f1f2f4 off-white
-pub const CARD_BG: iced::Color = iced::Color::WHITE;
-pub const TEXT_PRIMARY: iced::Color = iced::Color::from_rgb(0.13, 0.13, 0.13);
-pub const TEXT_SECONDARY: iced::Color = iced::Color::from_rgb(0.4, 0.4, 0.45);
+// ── Brand ────────────────────────────────────────────────────────────
+// Hue 265° → cool indigo-blue  (professional, calm)
+// Status hues: green 145°, red 26°, yellow 90°
 
-// Status colors
-pub const CONNECTED_GREEN: iced::Color = iced::Color::from_rgb(0.13, 0.76, 0.38); // #22C161
-pub const DISCONNECTED_GRAY: iced::Color = iced::Color::from_rgb(0.55, 0.55, 0.55);
-pub const ERROR_RED: iced::Color = iced::Color::from_rgb(0.9, 0.3, 0.3);
-pub const WARN_YELLOW: iced::Color = iced::Color::from_rgb(0.95, 0.72, 0.15);
+/// Sidebar background (very dark navy).
+pub const SIDEBAR_BG: iced::Color = iced::Color::from_rgb(0.044929, 0.067721, 0.117751);
+/// Sidebar nav hover.
+pub const SIDEBAR_HOVER: iced::Color = iced::Color::from_rgb(0.101749, 0.139102, 0.221434);
+/// Sidebar nav active / selected.
+pub const SIDEBAR_ACTIVE: iced::Color = iced::Color::from_rgb(0.147267, 0.204902, 0.334407);
 
-// Accent
-pub const PRIMARY_BLUE: iced::Color = iced::Color::from_rgb(0.2, 0.45, 0.9);
-pub const LOG_BG: iced::Color = iced::Color::from_rgb(0.12, 0.12, 0.14);           // #1e1e24 dark terminal
+// ── Surface ──────────────────────────────────────────────────────────
 
-// === Sidebar Styles ===
+/// Content area background — very light, subtle cool tint.
+pub const CONTENT_BG: iced::Color = iced::Color::from_rgb(0.954305, 0.960989, 0.974682);
+/// Card / panel surface.
+pub const CARD_BG: iced::Color = iced::Color::from_rgb(1.0, 1.0, 1.0);
+
+// ── Text ─────────────────────────────────────────────────────────────
+
+pub const TEXT_PRIMARY: iced::Color = iced::Color::from_rgb(0.019219, 0.022434, 0.030048);
+pub const TEXT_SECONDARY: iced::Color = iced::Color::from_rgb(0.249781, 0.260256, 0.281823);
+
+// ── Accent ───────────────────────────────────────────────────────────
+
+pub const PRIMARY_BLUE: iced::Color = iced::Color::from_rgb(0.234780, 0.384397, 0.756736);
+pub const PRIMARY_BLUE_HOVER: iced::Color = iced::Color::from_rgb(0.193187, 0.336819, 0.704655);
+
+// ── Status ───────────────────────────────────────────────────────────
+
+pub const CONNECTED_GREEN: iced::Color = iced::Color::from_rgb(0.173017, 0.527634, 0.211100);
+pub const ERROR_RED: iced::Color = iced::Color::from_rgb(0.764259, 0.224564, 0.213536);
+pub const ERROR_RED_HOVER: iced::Color = iced::Color::from_rgb(0.695688, 0.152054, 0.155865);
+pub const WARN_YELLOW: iced::Color = iced::Color::from_rgb(0.764510, 0.629357, 0.226361);
+
+/// Dark terminal background for live logs.
+pub const LOG_BG: iced::Color = iced::Color::from_rgb(0.026579, 0.031936, 0.044763);
+/// Light text on dark log background.
+pub const LOG_TEXT: iced::Color = iced::Color::from_rgb(0.750110, 0.769224, 0.808493);
+
+/// Translucent blue overlay for secondary-button hover.
+pub const BLUE_SOFT: iced::Color = iced::Color::from_rgb(0.182955, 0.324967, 0.691711);
+
+// ── Sidebar Styles ───────────────────────────────────────────────────
 
 pub fn sidebar_style() -> impl Fn(&iced::Theme) -> container::Style {
     move |_| container::Style {
@@ -44,7 +73,7 @@ pub fn sidebar_button_style(
     };
     match status {
         button::Status::Hovered => button::Style {
-            background: Some(iced::Background::Color(SIDEBAR_HOVER.into())),
+            background: Some(iced::Background::Color(SIDEBAR_HOVER)),
             ..base
         },
         _ => base,
@@ -56,7 +85,7 @@ pub fn sidebar_button_active_style(
     _status: iced_widget::button::Status,
 ) -> iced_widget::button::Style {
     iced_widget::button::Style {
-        background: Some(iced::Background::Color(SIDEBAR_ACTIVE.into())),
+        background: Some(iced::Background::Color(SIDEBAR_ACTIVE)),
         text_color: iced::Color::WHITE,
         border: iced::Border {
             radius: 6.0.into(),
@@ -66,7 +95,7 @@ pub fn sidebar_button_active_style(
     }
 }
 
-// === Content / Card Styles ===
+// ── Content / Card Styles ────────────────────────────────────────────
 
 pub fn content_style() -> impl Fn(&iced::Theme) -> container::Style {
     move |_| container::Style {
@@ -100,12 +129,12 @@ pub fn log_container_style() -> impl Fn(&iced::Theme) -> container::Style {
             width: 0.0,
             color: iced::Color::TRANSPARENT,
         },
-        text_color: Some(iced::Color::from_rgb(0.8, 0.85, 0.9)),
+        text_color: Some(LOG_TEXT),
         ..Default::default()
     }
 }
 
-// === Button Styles ===
+// ── Button Styles ────────────────────────────────────────────────────
 
 pub fn primary_button_style(
     _theme: &iced::Theme,
@@ -123,7 +152,7 @@ pub fn primary_button_style(
     };
     match status {
         button::Status::Hovered => button::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgb(0.25, 0.5, 0.95))),
+            background: Some(iced::Background::Color(PRIMARY_BLUE_HOVER)),
             ..base
         },
         _ => base,
@@ -146,7 +175,7 @@ pub fn danger_button_style(
     };
     match status {
         button::Status::Hovered => button::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgb(0.95, 0.35, 0.35))),
+            background: Some(iced::Background::Color(ERROR_RED_HOVER)),
             ..base
         },
         _ => base,
@@ -170,7 +199,7 @@ pub fn secondary_button_style(
     };
     match status {
         button::Status::Hovered => button::Style {
-            background: Some(iced::Background::Color(iced::Color::from_rgba(0.2, 0.45, 0.9, 0.1))),
+            background: Some(iced::Background::Color(BLUE_SOFT)),
             ..base
         },
         _ => base,

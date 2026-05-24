@@ -4,7 +4,9 @@ pub mod tray;
 
 use crate::config::AppSettings;
 use iced::{Element, Length, Subscription};
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc;
+use std::sync::Arc;
 
 // === Message ===
 
@@ -42,7 +44,6 @@ pub enum Message {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NavItem {
     Connect,
-    Status,
     Credentials,
     Settings,
 }
@@ -159,6 +160,7 @@ impl<S: Subscriber + 'static> Layer<S> for AuthLogLayer {
 
 pub struct UIApp {
     pub state: AppState,
+    cancel_auth: Arc<AtomicBool>,
 }
 
 impl UIApp {
@@ -193,6 +195,7 @@ impl UIApp {
                 tray_rx,
                 _tray_icon,
             },
+            cancel_auth: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -254,6 +257,10 @@ impl UIApp {
                 let tx = self.state.event_tx.clone();
                 self.state.connection_state = ConnectionState::Connecting;
 
+                // Create a fresh cancel token for this connection attempt
+                let cancel = Arc::new(AtomicBool::new(false));
+                self.cancel_auth = cancel.clone();
+
                 std::thread::spawn(move || {
                     use crate::cygnus::auth::auth_command_resolver;
                     use crate::cygnus::auth::args::{AuthArgs, LogLevel};
@@ -291,7 +298,7 @@ impl UIApp {
                     let _ = tx.send(BackgroundEvent::Status(ConnectionState::Connected));
 
                     tracing::dispatcher::with_default(&dispatch, || {
-                        match auth_command_resolver(args) {
+                        match auth_command_resolver(args, Some(cancel)) {
                             Ok(()) => {} // unreachable: keep_alive loops forever
                             Err(e) => {
                                 let _ = tx.send(BackgroundEvent::Error(e.to_string()));
@@ -304,6 +311,7 @@ impl UIApp {
             }
             Message::Disconnect => {
                 self.state.connection_state = ConnectionState::Disconnected;
+                self.cancel_auth.store(true, std::sync::atomic::Ordering::Relaxed);
                 iced::Task::none()
             }
             Message::Tick => {
@@ -487,7 +495,7 @@ impl UIApp {
             return self.close_dialog_view();
         }
 
-        use crate::ui::panel::{connect, credentials, settings, status};
+        use crate::ui::panel::{connect, credentials, settings};
         use crate::ui::theme::{self, content_style, sidebar_style};
 
         use iced_widget::{button, column, container, row, text, Space};
@@ -496,13 +504,13 @@ impl UIApp {
 
         let title = container(
             text("Cygnus Drcom")
-                .size(18)
+                .size(15)
                 .color(iced::Color::WHITE)
         )
-        .padding(iced::Padding { top: 20.0, right: 16.0, bottom: 16.0, left: 16.0 });
+        .padding(iced::Padding { top: 14.0, right: 16.0, bottom: 12.0, left: 16.0 });
 
         fn nav(name: &'static str, item: NavItem, active: bool) -> Element<'static, Message> {
-            let lbl = text(name).size(14);
+            let lbl = text(name).size(13);
             if active {
                 button(lbl)
                     .style(theme::sidebar_button_active_style)
@@ -520,26 +528,24 @@ impl UIApp {
 
         let nav_col = column![
             nav("Connect",     NavItem::Connect,     self.state.nav == NavItem::Connect),
-            nav("Status",      NavItem::Status,      self.state.nav == NavItem::Status),
             nav("Credentials", NavItem::Credentials, self.state.nav == NavItem::Credentials),
             nav("Settings",    NavItem::Settings,    self.state.nav == NavItem::Settings),
             Space::new().height(Length::Fill),
         ]
-        .spacing(4)
-        .padding(iced::Padding { top: 0.0, right: 8.0, bottom: 8.0, left: 8.0 });
+        .spacing(2)
+        .padding(iced::Padding { top: 0.0, right: 6.0, bottom: 6.0, left: 6.0 });
 
         let sidebar = container(
             column![title, nav_col]
         )
         .style(sidebar_style())
-        .width(Length::Fixed(200.0))
+        .width(Length::Fixed(160.0))
         .height(Length::Fill);
 
         // === Content ===
 
         let content_panel = match self.state.nav {
             NavItem::Connect     => connect::view(&self.state),
-            NavItem::Status      => status::view(&self.state),
             NavItem::Credentials => credentials::view(&self.state),
             NavItem::Settings    => settings::view(&self.state.settings),
         };
@@ -559,29 +565,29 @@ impl UIApp {
         container(
             container(
                 column![
-                    text("Close Cygnus Drcom?").size(22),
-                    text("Do you want to quit or minimize to the system tray?").size(14),
+                    text("Close Cygnus Drcom?").size(18),
+                    text("Do you want to quit or minimize to the system tray?").size(13),
                     row![
-                        button(text("Minimize to Tray").size(14))
+                        button(text("Minimize to Tray").size(13))
                             .on_press(Message::ConfirmMinimizeToTray)
                             .style(theme::primary_button_style),
-                        button(text("Quit").size(14))
+                        button(text("Quit").size(13))
                             .on_press(Message::ConfirmQuit)
                             .style(theme::danger_button_style),
                     ]
-                    .spacing(12),
+                    .spacing(10),
                 ]
-                .spacing(20)
+                .spacing(14)
                 .align_x(iced::Alignment::Center),
             )
-            .padding(32)
+            .padding(24)
             .style(card_style()),
         )
         .width(Length::Fill)
         .height(Length::Fill)
         .center_x(Length::Fill)
         .center_y(Length::Fill)
-        .padding(40)
+        .padding(20)
         .into()
     }
 
@@ -603,7 +609,9 @@ pub fn run() -> iced::Result {
     )
     .subscription(|app: &UIApp| app.subscription())
     .title("Cygnus Drcom")
+    .default_font(iced::Font::with_name("Segoe UI"))
     .exit_on_close_request(false)
+    .window_size(iced::Size::new(660.0, 560.0))
     .centered()
     .run()
 }

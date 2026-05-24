@@ -61,9 +61,9 @@ pub fn view(state: &AppState) -> iced::Element<'_, Message> {
         .width(Length::Fill);
 
     container(
-        column![tab_bar, Space::new().height(Length::Fixed(16.0)), body]
+        column![tab_bar, Space::new().height(Length::Fixed(16.0)), body, Space::new().height(Length::Fill)]
     )
-    .padding(32)
+    .padding(20)
     .width(Length::Fill)
     .height(Length::Fill)
     .into()
@@ -81,7 +81,7 @@ fn new_tab(state: &AppState) -> iced::Element<'_, Message> {
             text_input(placeholder, value)
                 .on_input(msg)
                 .size(14)
-                .width(iced::Length::Fixed(360.0)),
+                .width(iced::Length::Fill),
         ]
         .spacing(0)
         .into()
@@ -89,9 +89,9 @@ fn new_tab(state: &AppState) -> iced::Element<'_, Message> {
 
     column![
         text("Create User File").size(16),
-        Space::new().height(20.0),
-        field("Username",    "username",           &state.form_username, Message::UpdateUsername),
         Space::new().height(16.0),
+        field("Username",    "username",           &state.form_username, Message::UpdateUsername),
+        Space::new().height(12.0),
         // Password field: masked input
         column![
             text("Password").size(12).color(theme::TEXT_SECONDARY),
@@ -100,14 +100,14 @@ fn new_tab(state: &AppState) -> iced::Element<'_, Message> {
                 .on_input(Message::UpdatePassword)
                 .secure(true)
                 .size(14)
-                .width(iced::Length::Fixed(360.0)),
+                .width(iced::Length::Fill),
         ]
         .spacing(0),
-        Space::new().height(16.0),
+        Space::new().height(12.0),
         field("MAC Address", "00:11:22:33:44:55",  &state.form_mac,      Message::UpdateMac),
-        Space::new().height(16.0),
+        Space::new().height(12.0),
         field("Output File", "/path/to/output.usr", &state.form_usr_path, Message::UpdateUsrPath),
-        Space::new().height(24.0),
+        Space::new().height(20.0),
         button(text("Create .usr File").size(14))
             .style(theme::primary_button_style)
             .on_press(Message::CreateUsr {
@@ -145,13 +145,13 @@ fn load_tab(state: &AppState) -> iced::Element<'_, Message> {
 
     column![
         text("Load Authentication File").size(16),
-        Space::new().height(20.0),
+        Space::new().height(16.0),
         text("File Path").size(12).color(theme::TEXT_SECONDARY),
         Space::new().height(4.0),
         text_input("path/to/file.usr", &state.form_usr_path)
             .on_input(Message::UpdateUsrPath)
             .size(14)
-            .width(iced::Length::Fixed(360.0)),
+            .width(iced::Length::Fill),
         Space::new().height(12.0),
         row![
             button(text("Load File").size(14))
@@ -196,13 +196,13 @@ fn inspect_tab(state: &AppState) -> iced::Element<'_, Message> {
 
     column![
         text("Inspect User File").size(16),
-        Space::new().height(20.0),
+        Space::new().height(16.0),
         text("File Path").size(12).color(theme::TEXT_SECONDARY),
         Space::new().height(4.0),
         text_input("path/to/file.usr", &state.form_usr_path)
             .on_input(Message::UpdateUsrPath)
             .size(14)
-            .width(iced::Length::Fixed(360.0)),
+            .width(iced::Length::Fill),
         Space::new().height(12.0),
         row![
             button(text("Load & Decrypt").size(14))
@@ -218,7 +218,7 @@ fn inspect_tab(state: &AppState) -> iced::Element<'_, Message> {
             },
         ]
         .align_y(iced::Alignment::Center),
-        Space::new().height(24.0),
+        Space::new().height(20.0),
         user_section,
     ]
     .spacing(0)

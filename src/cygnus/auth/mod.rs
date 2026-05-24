@@ -4,6 +4,8 @@ pub mod data;
 pub mod error;
 
 use std::fs::OpenOptions;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use args::AuthArgs;
 use context::DrContext;
@@ -14,9 +16,14 @@ use tracing::{error, info, warn};
 use crate::cygnus::user::cipher::UserCipher;
 
 #[tracing::instrument(skip_all, name = "auth")]
-pub fn auth_command_resolver(args: AuthArgs) -> AuthResult<()> {
+pub fn auth_command_resolver(args: AuthArgs, cancel: Option<Arc<AtomicBool>>) -> AuthResult<()> {
     let mut retry_times = args.retry;
     loop {
+        if cancel.as_ref().is_some_and(|c| c.load(Ordering::Relaxed)) {
+            info!("Authentication cancelled by user");
+            return Err(AuthError::AppMaxTriesExceeded);
+        }
+
         let mut ctx = create_context(&args.file, args.timeout)?;
         info!("Starting authentication process");
 
