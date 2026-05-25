@@ -187,7 +187,7 @@ impl UIApp {
                 active_credentials_tab: CredentialsTab::New,
                 form_username: String::new(),
                 form_password: String::new(),
-                form_mac: String::new(),
+                form_mac: detect_wired_mac(),
                 decrypted_user: None,
                 event_rx: Some(rx),
                 event_tx: tx,
@@ -688,6 +688,30 @@ impl UIApp {
             window::close_requests().map(|_id| Message::CloseRequested),
         ])
     }
+}
+
+/// Try to detect the MAC address of the wired Ethernet interface.
+/// Falls back to empty string if detection fails.
+fn detect_wired_mac() -> String {
+    // Try the default MAC address first
+    if let Ok(Some(mac)) = mac_address::get_mac_address() {
+        let s = mac.to_string();
+        if !s.is_empty() && s != "00:00:00:00:00:00" {
+            return s;
+        }
+    }
+
+    // Try common wired interface names across platforms
+    for name in &["eth0", "en0", "enp0s3", "enx*"] {
+        if let Ok(Some(mac)) = mac_address::mac_address_by_name(name) {
+            let s = mac.to_string();
+            if !s.is_empty() && s != "00:00:00:00:00:00" {
+                return s;
+            }
+        }
+    }
+
+    String::new()
 }
 
 pub fn run() -> iced::Result {

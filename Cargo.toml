@@ -19,6 +19,7 @@ aes-gcm = { version = "0.10", features = ["std"] }
 clap = { version = "4", features = ["derive"] }
 hostname = "0.4"
 image = "0.25"
+mac_address = "1.1"
 md5 = "0.7"
 rand = "0.8"
 time = { version = "0.3", features = ["formatting", "local-offset", "macros"] }
